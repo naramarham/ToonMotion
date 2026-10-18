@@ -1,0 +1,18 @@
+{
+  "name": "ToonMotion AI Cartoon Animator",
+  "short_name": "ToonMotion",
+  "description": "Upload any photo and animate objects into cartoon video clips.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0f172a",
+  "theme_color": "#4f46e5",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "https://cdn-icons-png.flaticon.com/512/4712/4712035.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
