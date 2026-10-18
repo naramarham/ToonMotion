@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>ToonMotion Studio</title>
+  <meta name="theme-color" content="#0f172a" />
+  <link rel="manifest" href="/manifest.json" />
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col items-center p-4 select-none">
+
+  <!-- Top App Bar -->
+  <div class="w-full max-w-md flex justify-between items-center bg-slate-900 border border-slate-800 rounded-2xl px-4 py-3 mt-2 shadow-lg">
+    <div class="flex items-center gap-2">
+      <div class="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center font-black text-white">T</div>
+      <div>
+        <h1 class="text-base font-bold text-white leading-tight">ToonMotion</h1>
+        <p class="text-[11px] text-slate-400">AI Cartoon Animator</p>
+      </div>
+    </div>
+
+    <div class="flex items-center gap-2">
+      <button id="installAppBtn" class="hidden px-2.5 py-1 bg-emerald-600 hover:bg-emerald-500 text-[11px] font-bold rounded-lg transition">
+        Install App
+      </button>
+      <button onclick="toggleModal('creditModal', true)" class="bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-xl px-3 py-1.5 text-right transition">
+        <span class="text-[10px] text-slate-400 block uppercase tracking-wider">Credits</span>
+        <span id="creditBadge" class="text-xs font-bold text-emerald-400">5 Free</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Main Workspace -->
+  <main class="w-full max-w-md bg-slate-900 rounded-2xl p-5 shadow-2xl border border-slate-800 flex flex-col gap-4 mt-3">
+
+    <!-- Step 1: Gallery Image Picker -->
+    <div>
+      <label class="block text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">1. Select Photo from Device</label>
+      <input type="file" id="fileInput" accept="image/png, image/jpeg, image/webp" class="hidden" />
+      <div 
+        onclick="document.getElementById('fileInput').click()"
+        class="border-2 border-dashed border-slate-700 hover:border-indigo-500 rounded-xl p-4 flex flex-col items-center justify-center cursor-pointer transition bg-slate-950/60 min-h-[170px] relative overflow-hidden"
+      >
+        <img id="previewImg" class="hidden max-h-44 rounded-lg object-contain z-10" alt="Uploaded Preview" />
+        <div id="uploadPlaceholder" class="text-center">
+          <svg class="w-9 h-9 mx-auto text-indigo-400 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+          </svg>
+          <span class="text-xs font-semibold text-indigo-400">Tap to Upload Photo from Gallery</span>
+          <p class="text-[11px] text-slate-500 mt-0.5">Auto-compressed in browser (&lt;150 KB)</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Step 2: Style & Motion Controls -->
+    <div class="grid grid-cols-2 gap-3">
+      <div>
+        <label class="block text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1">2. Cartoon Filter</label>
+        <select id="styleSelect" class="w-full bg-slate-800 border border-slate-700 rounded-xl p-2.5 text-xs text-white outline-none focus:border-indigo-500">
+          <option value="pixar">3D Vibrant Toon</option>
+          <option value="anime">2D Cel-Shaded</option>
+          <option value="comic">Pop-Art Halftone</option>
+          <option value="neon">Cyber-Toon Glow</option>
+        </select>
+      </div>
+
+      <div>
+        <label class="block text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1">3. Object Motion</label>
+        <select id="motionSelect" class="w-full bg-slate-800 border border-slate-700 rounded-xl p-2.5 text-xs text-white outline-none focus:border-indigo-500">
+          <option value="bounce">Happy Bounce</option>
+          <option value="dance">Groove & Wobble</option>
+          <option value="spin">360° Dynamic Spin</option>
+          <option value="pulse">Hero Zoom & Pulse</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- Step 3: Custom Prompt & Engine Selection -->
+    <div>
+      <label class="block text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1">4. Optional Action Prompt</label>
+      <input 
+        type="text" 
+        id="customPrompt" 
+        placeholder="e.g., Make the coffee mug jump excitedly"
+        maxlength="120"
+        class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white placeholder-slate-500 outline-none focus:border-indigo-500"
+      />
+    </div>
+
+    <div>
+      <label class="block text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1">5. Rendering Engine</label>
+      <select id="engineSelect" class="w-full bg-slate-800 border border-slate-700 rounded-xl p-2.5 text-xs text-white outline-none focus:border-indigo-500">
+        <option value="free_hybrid">Standard Engine (Gemini 3.8 Flash + Canvas 30fps - Free Quota)</option>
+        <option value="veo_cloud">Pro Cloud Engine (Google Veo 3.1 Lite AI Video - Requires Pro Key)</option>
+      </select>
+    </div>
+
+    <!-- Generate Action Button -->
+    <button 
+      id="generateBtn" 
+      disabled 
+      class="w-full py-3 bg-indigo-600 hover:bg-indigo-500 disabled:bg-slate-800 disabled:text-slate-600 text-white text-sm font-bold rounded-xl transition shadow-lg shadow-indigo-600/20"
+    >
+      Generate Cartoon Video (1 Credit)
+    </button>
+
+    <!-- Output Area -->
+    <div id="outputSection" class="hidden border-t border-slate-800 pt-4 flex flex-col items-center gap-3">
+      <div id="statusBox" class="text-center py-2">
+        <div class="animate-spin rounded-full h-7 w-7 border-b-2 border-indigo-400 mx-auto mb-2"></div>
+        <p id="statusText" class="text-xs text-slate-400">Analyzing object with Gemini AI...</p>
+      </div>
+
+      <!-- Hidden Render Canvas for Free Engine Video Export -->
+      <canvas id="renderCanvas" width="512" height="512" class="hidden"></canvas>
+
+      <video id="outputVideo" controls autoplay loop playsinline class="hidden w-full rounded-xl border border-slate-700 bg-black"></video>
+      <p id="aiCaption" class="text-xs text-indigo-300 italic text-center hidden"></p>
+
+      <a id="downloadBtn" href="#" download="toonmotion-clip.webm" class="hidden w-full py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-xl text-center transition">
+        Download Video to Phone
+      </a>
+    </div>
+  </main>
+
+  <!-- Monetization / Credit Top-Up Modal -->
+  <div id="creditModal" class="hidden fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4">
+    <div class="bg-slate-900 border border-slate-700 rounded-2xl max-w-sm w-full p-5 space-y-4">
+      <div class="flex justify-between items-center">
+        <h2 class="text-sm font-bold text-white">Quota & Pro Credits</h2>
+        <button onclick="toggleModal('creditModal', false)" class="text-slate-400 hover:text-white text-sm">&times; Close</button>
+      </div>
+      <p class="text-xs text-slate-400 leading-relaxed">
+        You receive <strong>5 free generations every 24 hours</strong>. Need more generations or Cloud Veo 3.1 rendering? Purchase a Pro Credit code or enter your activation key below.
+      </p>
+      <div class="space-y-2">
+        <a 
+          href="https://lemonsqueezy.com" 
+          target="_blank" 
+          class="block w-full py-2.5 bg-indigo-600 hover:bg-indigo-500 text-center text-xs font-bold rounded-xl text-white"
+        >
+          Buy 50 Pro Credits ($4.99)
+        </a>
+        <div class="flex gap-2 pt-2">
+          <input type="text" id="promoCodeInput" placeholder="Enter Activation Code" class="flex-1 bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white outline-none" />
+          <button onclick="redeemCode()" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-xs font-bold rounded-xl text-white">
+            Unlock
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // --- 1. SERVICE WORKER & ANDROID PWA INSTALLER ---
+    let deferredPrompt;
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/sw.js').catch(() => {});
+    }
+    window.addEventListener('beforeinstallprompt', (e) => {
+      e.preventDefault();
+      deferredPrompt = e;
+      const btn = document.getElementById('installAppBtn');
+      btn.classList.remove('hidden');
+      btn.onclick = async () => {
+        deferredPrompt.prompt();
+        await deferredPrompt.userChoice;
+        btn.classList.add('hidden');
+      };
+    });
+
+    // --- 2. DAILY FREE QUOTA + PAID CREDITS WALLET ---
+    const DAILY_FREE_MAX = 5;
+    function getWallet() {
+      const today = new Date().toISOString().slice(0, 10);
+      const raw = JSON.parse(localStorage.getItem('tm_wallet') || '{}');
+      if (raw.date !== today) {
+        raw.date = today;
+        raw.freeUsed = 0;
+      }
+      raw.paidCredits = raw.paidCredits || 0;
+      localStorage.setItem('tm_wallet', JSON.stringify(raw));
+      return raw;
+    }
+
+    function getTotalAvailable() {
+      const w = getWallet();
+      return Math.max(0, DAILY_FREE_MAX - w.freeUsed) + w.paidCredits;
+    }
+
+    function consumeOneCredit() {
+      const w = getWallet();
+      if (w.freeUsed < DAILY_FREE_MAX) {
+        w.freeUsed += 1;
+      } else if (w.paidCredits > 0) {
+        w.paidCredits -= 1;
+      }
+      localStorage.setItem('tm_wallet', JSON.stringify(w));
+      refreshWalletUI();
+    }
+
+    function refreshWalletUI() {
+      const w = getWallet();
+      const freeLeft = Math.max(0, DAILY_FREE_MAX - w.freeUsed);
+      const badge = document.getElementById('creditBadge');
+      badge.innerText = `${freeLeft} Free | ${w.paidCredits} Pro`;
+      badge.className = (freeLeft + w.paidCredits > 0)
+        ? 'text-xs font-bold text-emerald-400'
+        : 'text-xs font-bold text-rose-400';
+    }
+
+    function toggleModal(id, show) {
+      document.getElementById(id).classList.toggle('hidden', !show);
+    }
+
+    async function redeemCode() {
+      const code = document.getElementById('promoCodeInput').value.trim();
+      if (!code) return;
+      const res = await fetch('/api/animate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'verify_code', code })
+      });
+      const data = await res.json();
+      if (data.valid) {
+        const w = getWallet();
+        w.paidCredits += data.creditsAdded;
+        localStorage.setItem('tm_wallet', JSON.stringify(w));
+        refreshWalletUI();
+        document.getElementById('promoCodeInput').value = '';
+        toggleModal('creditModal', false);
+        alert(`Added ${data.creditsAdded} Pro Credits!`);
+      } else {
+        alert('Invalid activation code.');
+      }
+    }
+
+    // --- 3. CLIENT-SIDE IMAGE COMPRESSION (<150 KB) ---
+    let compressedBase64 = null;
+    let loadedImageElement = null;
+
+    document.getElementById('fileInput').addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        const img = new Image();
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          const maxDim = 512;
+          let w = img.width, h = img.height;
+          if (w > h && w > maxDim) { h = Math.round((h * maxDim) / w); w = maxDim; }
+          else if (h > maxDim) { w = Math.round((w * maxDim) / h); h = maxDim; }
+          canvas.width = w; canvas.height = h;
+          canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+          compressedBase64 = canvas.toDataURL('image/jpeg', 0.78);
+
+          loadedImageElement = new Image();
+          loadedImageElement.src = compressedBase64;
+
+          const preview = document.getElementById('previewImg');
+          preview.src = compressedBase64;
+          preview.classList.remove('hidden');
+          document.getElementById('uploadPlaceholder').classList.add('hidden');
+          document.getElementById('generateBtn').disabled = (getTotalAvailable() <= 0);
+        };
+        img.src = ev.target.result;
+      };
+      reader.readAsDataURL(file);
+    });
+
+    // --- 4. IN-BROWSER CARTOON VIDEO RENDERER (FREE MODE) ---
+    function renderCartoonVideoInBrowser(img, style, motion, aiMetadata) {
+      return new Promise((resolve) => {
+        const canvas = document.getElementById('renderCanvas');
+        const ctx = canvas.getContext('2d');
+        const stream = canvas.captureStream(30);
+        const mimeType = MediaRecorder.isTypeSupported('video/webm;codecs=vp9')
+          ? 'video/webm;codecs=vp9'
+          : 'video/webm';
+        const recorder = new MediaRecorder(stream, { mimeType });
+        const chunks = [];
+
+        recorder.ondataavailable = (e) => { if (e.data.size > 0) chunks.push(e.data); };
+        recorder.onstop = () => {
+          const blob = new Blob(chunks, { type: 'video/webm' });
+          resolve(URL.createObjectURL(blob));
+        };
+
+        recorder.start();
+        let frame = 0;
+        const totalFrames = 120; // 4 seconds at 30fps
+        const accentColor = aiMetadata?.accentColor || '#6366f1';
+
+        const interval = setInterval(() => {
+          const t = frame / totalFrames;
+          ctx.clearRect(0, 0, 512, 512);
+
+          // Radial Cartoon Background
+          const grad = ctx.createRadialGradient(256, 256, 40, 256, 256, 360);
+          grad.addColorStop(0, accentColor);
+          grad.addColorStop(1, '#0f172a');
+          ctx.fillStyle = grad;
+          ctx.fillRect(0, 0, 512, 512);
+
+          ctx.save();
+          ctx.translate(256, 256);
+
+          // Apply Selected Motion Physics
+          if (motion === 'bounce') {
+            const dy = Math.abs(Math.sin(t * Math.PI * 4)) * -45;
+            const squash = 1 + Math.cos(t * Math.PI * 8) * 0.08;
+            ctx.translate(0, dy);
+            ctx.scale(squash, 2 - squash);
+          } else if (motion === 'dance') {
+            ctx.rotate(Math.sin(t * Math.PI * 6) * 0.18);
+            ctx.scale(1 + Math.sin(t * Math.PI * 4) * 0.1, 1 + Math.cos(t * Math.PI * 4) * 0.1);
+          } else if (motion === 'spin') {
+            ctx.rotate(t * Math.PI * 2);
+            const s = 0.85 + Math.sin(t * Math.PI) * 0.25;
+            ctx.scale(s, s);
+          } else if (motion === 'pulse') {
+            const s = 0.9 + Math.sin(t * Math.PI * 6) * 0.18;
+            ctx.scale(s, s);
+          }
+
+          // Apply Cartoon Shader Filters
+          if (style === 'pixar') ctx.filter = 'saturate(185%) contrast(130%) brightness(108%)';
+          else if (style === 'anime') ctx.filter = 'saturate(220%) contrast(155%)';
+          else if (style === 'comic') ctx.filter = 'contrast(190%) saturate(150%) sepia(20%)';
+          else if (style === 'neon') ctx.filter = 'hue-rotate(' + Math.round(t * 360) + 'deg) saturate(210%) contrast(140%)';
+
+          // Draw Cartoon Sticker Border + Image
+          const drawW = 360, drawH = 360;
+          ctx.fillStyle = '#ffffff';
+          ctx.beginPath();
+          ctx.roundRect(-drawW/2 - 8, -drawH/2 - 8, drawW + 16, drawH + 16, 28);
+          ctx.fill();
+
+          ctx.beginPath();
+          ctx.roundRect(-drawW/2, -drawH/2, drawW, drawH, 22);
+          ctx.clip();
+          ctx.drawImage(img, -drawW/2, -drawH/2, drawW, drawH);
+          ctx.restore();
+
+          // Overlay AI Comic Caption Banner
+          if (aiMetadata?.caption) {
+            ctx.fillStyle = 'rgba(15, 23, 42, 0.85)';
+            ctx.fillRect(24, 435, 464, 52);
+            ctx.strokeStyle = '#ffffff';
+            ctx.lineWidth = 2;
+            ctx.strokeRect(24, 435, 464, 52);
+            ctx.fillStyle = '#ffffff';
+            ctx.font = 'bold 18px sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText(aiMetadata.caption.slice(0, 42), 256, 467);
+          }
+
+          frame++;
+          if (frame >= totalFrames) {
+            clearInterval(interval);
+            recorder.stop();
+          }
+        }, 1000 / 30);
+      });
+    }
+
+    // --- 5. MAIN GENERATION FLOW ---
+    document.getElementById('generateBtn').addEventListener('click', async () => {
+      if (getTotalAvailable() <= 0) {
+        toggleModal('creditModal', true);
+        return;
+      }
+
+      const style = document.getElementById('styleSelect').value;
+      const motion = document.getElementById('motionSelect').value;
+      const customPrompt = document.getElementById('customPrompt').value.trim();
+      const engine = document.getElementById('engineSelect').value;
+
+      document.getElementById('outputSection').classList.remove('hidden');
+      document.getElementById('statusBox').classList.remove('hidden');
+      document.getElementById('outputVideo').classList.add('hidden');
+      document.getElementById('downloadBtn').classList.add('hidden');
+      document.getElementById('aiCaption').classList.add('hidden');
+      document.getElementById('generateBtn').disabled = true;
+
+      try {
+        document.getElementById('statusText').innerText = 'Communicating with Gemini AI...';
+        const res = await fetch('/api/animate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action: 'generate',
+            image: compressedBase64,
+            style,
+            motion,
+            customPrompt,
+            engine
+          })
+        });
+
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Server error');
+
+        let videoUrl = null;
+        if (data.mode === 'veo_cloud' && data.videoUrl) {
+          videoUrl = data.videoUrl;
+        } else {
+          document.getElementById('statusText').innerText = 'Rendering 30fps cartoon clip in browser...';
+          videoUrl = await renderCartoonVideoInBrowser(loadedImageElement, style, motion, data.aiMetadata);
+        }
+
+        consumeOneCredit();
+
+        const videoEl = document.getElementById('outputVideo');
+        videoEl.src = videoUrl;
+        videoEl.classList.remove('hidden');
+        document.getElementById('statusBox').classList.add('hidden');
+
+        if (data.aiMetadata?.caption) {
+          const cap = document.getElementById('aiCaption');
+          cap.innerText = `"${data.aiMetadata.caption}"`;
+          cap.classList.remove('hidden');
+        }
+
+        const dl = document.getElementById('downloadBtn');
+        dl.href = videoUrl;
+        dl.download = data.mode === 'veo_cloud' ? 'toonmotion.mp4' : 'toonmotion.webm';
+        dl.classList.remove('hidden');
+      } catch (err) {
+        alert('Error: ' + err.message);
+        document.getElementById('statusBox').classList.add('hidden');
+      } finally {
+        document.getElementById('generateBtn').disabled = (getTotalAvailable() <= 0);
+      }
+    });
+
+    refreshWalletUI();
+  </script>
+</body>
+</html>
