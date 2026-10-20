@@ -82,7 +82,7 @@
       <input 
         type="text" 
         id="customPrompt" 
-        placeholder="e.g., Make the coffee mug jump excitedly"
+        placeholder="e.g., Make the bike talk excitedly"
         maxlength="120"
         class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white placeholder-slate-500 outline-none focus:border-indigo-500"
       />
@@ -91,7 +91,7 @@
     <div>
       <label class="block text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1">5. Rendering Engine</label>
       <select id="engineSelect" class="w-full bg-slate-800 border border-slate-700 rounded-xl p-2.5 text-xs text-white outline-none focus:border-indigo-500">
-        <option value="free_hybrid">Standard Engine (Gemini 3.8 Flash + Canvas 30fps - Free Quota)</option>
+        <option value="free_hybrid">Standard Engine (Gemini Flash Vision + Canvas 30fps - Free Quota)</option>
         <option value="veo_cloud">Pro Cloud Engine (Google Veo 3.1 Lite AI Video - Requires Pro Key)</option>
       </select>
     </div>
@@ -204,7 +204,7 @@
       const w = getWallet();
       const freeLeft = Math.max(0, DAILY_FREE_MAX - w.freeUsed);
       const badge = document.getElementById('creditBadge');
-      badge.innerText = `${freeLeft} Free | ${w.paidCredits} Pro`;
+      badge.innerText = `${freeLeft} Free \vert{}${w.paidCredits} Pro`;
       badge.className = (freeLeft + w.paidCredits > 0)
         ? 'text-xs font-bold text-emerald-400'
         : 'text-xs font-bold text-rose-400';
@@ -270,7 +270,7 @@
       reader.readAsDataURL(file);
     });
 
-    // --- 4. IN-BROWSER CARTOON VIDEO RENDERER (FREE MODE) ---
+    // --- 4. OBJECT-AWARE CARTOON RIGGING & LIP-SYNC ENGINE ---
     function renderCartoonVideoInBrowser(img, style, motion, aiMetadata) {
       return new Promise((resolve) => {
         const canvas = document.getElementById('renderCanvas');
@@ -289,154 +289,72 @@
         };
 
         recorder.start();
+
         let frame = 0;
         const totalFrames = 120; // 4 seconds at 30fps
-        const accentColor = aiMetadata?.accentColor || '#6366f1';
 
-        const interval = setInterval(() => {
+        // Extract Normalized Coordinates (0-1000 scale)
+        const box = aiMetadata.box_2d || [200, 200, 800, 800];
+        const ymin = (box[0] / 1000) * img.height;
+        const xmin = (box[1] / 1000) * img.width;
+        const ymax = (box[2] / 1000) * img.height;
+        const xmax = (box[3] / 1000) * img.width;
+        const objW = Math.max(20, xmax - xmin);
+        const objH = Math.max(20, ymax - ymin);
+
+        // Pre-render the cropped object onto an offscreen canvas
+        const objCanvas = document.createElement('canvas');
+        objCanvas.width = objW;
+        objCanvas.height = objH;
+        const objCtx = objCanvas.getContext('2d');
+        objCtx.drawImage(img, xmin, ymin, objW, objH, 0, 0, objW, objH);
+
+        const renderInterval = setInterval(() => {
           const t = frame / totalFrames;
           ctx.clearRect(0, 0, 512, 512);
 
-          // Radial Cartoon Background
-          const grad = ctx.createRadialGradient(256, 256, 40, 256, 256, 360);
-          grad.addColorStop(0, accentColor);
-          grad.addColorStop(1, '#0f172a');
-          ctx.fillStyle = grad;
-          ctx.fillRect(0, 0, 512, 512);
-
+          // 1. Static Dimmed Background Layer
           ctx.save();
-          ctx.translate(256, 256);
-
-          // Apply Selected Motion Physics
-          if (motion === 'bounce') {
-            const dy = Math.abs(Math.sin(t * Math.PI * 4)) * -45;
-            const squash = 1 + Math.cos(t * Math.PI * 8) * 0.08;
-            ctx.translate(0, dy);
-            ctx.scale(squash, 2 - squash);
-          } else if (motion === 'dance') {
-            ctx.rotate(Math.sin(t * Math.PI * 6) * 0.18);
-            ctx.scale(1 + Math.sin(t * Math.PI * 4) * 0.1, 1 + Math.cos(t * Math.PI * 4) * 0.1);
-          } else if (motion === 'spin') {
-            ctx.rotate(t * Math.PI * 2);
-            const s = 0.85 + Math.sin(t * Math.PI) * 0.25;
-            ctx.scale(s, s);
-          } else if (motion === 'pulse') {
-            const s = 0.9 + Math.sin(t * Math.PI * 6) * 0.18;
-            ctx.scale(s, s);
-          }
-
-          // Apply Cartoon Shader Filters
-          if (style === 'pixar') ctx.filter = 'saturate(185%) contrast(130%) brightness(108%)';
-          else if (style === 'anime') ctx.filter = 'saturate(220%) contrast(155%)';
-          else if (style === 'comic') ctx.filter = 'contrast(190%) saturate(150%) sepia(20%)';
-          else if (style === 'neon') ctx.filter = 'hue-rotate(' + Math.round(t * 360) + 'deg) saturate(210%) contrast(140%)';
-
-          // Draw Cartoon Sticker Border + Image
-          const drawW = 360, drawH = 360;
-          ctx.fillStyle = '#ffffff';
-          ctx.beginPath();
-          ctx.roundRect(-drawW/2 - 8, -drawH/2 - 8, drawW + 16, drawH + 16, 28);
-          ctx.fill();
-
-          ctx.beginPath();
-          ctx.roundRect(-drawW/2, -drawH/2, drawW, drawH, 22);
-          ctx.clip();
-          ctx.drawImage(img, -drawW/2, -drawH/2, drawW, drawH);
+          ctx.filter = 'brightness(75%) blur(1px)';
+          ctx.drawImage(img, 0, 0, 512, 512);
           ctx.restore();
 
-          // Overlay AI Comic Caption Banner
-          if (aiMetadata?.caption) {
-            ctx.fillStyle = 'rgba(15, 23, 42, 0.85)';
-            ctx.fillRect(24, 435, 464, 52);
-            ctx.strokeStyle = '#ffffff';
-            ctx.lineWidth = 2;
-            ctx.strokeRect(24, 435, 464, 52);
-            ctx.fillStyle = '#ffffff';
-            ctx.font = 'bold 18px sans-serif';
-            ctx.textAlign = 'center';
-            ctx.fillText(aiMetadata.caption.slice(0, 42), 256, 467);
+          // 2. Object Animation Physics (Independent of background)
+          let dy = 0;
+          let angle = 0;
+          let sx = 1.0;
+          let sy = 1.0;
+
+          if (motion === 'bounce') {
+            const bounceCycle = Math.abs(Math.sin(t * Math.PI * 6));
+            dy = -bounceCycle * 55;
+            sx = 1 + (1 - bounceCycle) * 0.15;
+            sy = 1 - (1 - bounceCycle) * 0.12;
+          } else if (motion === 'dance') {
+            angle = Math.sin(t * Math.PI * 8) * 0.12;
+            dy = Math.sin(t * Math.PI * 4) * 15;
+            sx = 1 + Math.sin(t * Math.PI * 4) * 0.08;
+          } else if (motion === 'spin') {
+            angle = t * Math.PI * 4;
+            dy = Math.sin(t * Math.PI * 2) * 10;
+          } else {
+            // Pulse / Breathe
+            sx = 1 + Math.sin(t * Math.PI * 4) * 0.1;
+            sy = sx;
           }
 
-          frame++;
-          if (frame >= totalFrames) {
-            clearInterval(interval);
-            recorder.stop();
-          }
-        }, 1000 / 30);
-      });
-    }
+          const destCenterX = 256;
+          const destCenterY = 256 + dy;
+          const targetW = (objW / img.width) * 440;
+          const targetH = (objH / img.height) * 440;
 
-    // --- 5. MAIN GENERATION FLOW ---
-    document.getElementById('generateBtn').addEventListener('click', async () => {
-      if (getTotalAvailable() <= 0) {
-        toggleModal('creditModal', true);
-        return;
-      }
+          ctx.save();
+          ctx.translate(destCenterX, destCenterY);
+          ctx.rotate(angle);
+          ctx.scale(sx, sy);
 
-      const style = document.getElementById('styleSelect').value;
-      const motion = document.getElementById('motionSelect').value;
-      const customPrompt = document.getElementById('customPrompt').value.trim();
-      const engine = document.getElementById('engineSelect').value;
-
-      document.getElementById('outputSection').classList.remove('hidden');
-      document.getElementById('statusBox').classList.remove('hidden');
-      document.getElementById('outputVideo').classList.add('hidden');
-      document.getElementById('downloadBtn').classList.add('hidden');
-      document.getElementById('aiCaption').classList.add('hidden');
-      document.getElementById('generateBtn').disabled = true;
-
-      try {
-        document.getElementById('statusText').innerText = 'Communicating with Gemini AI...';
-        const res = await fetch('/api/animate', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            action: 'generate',
-            image: compressedBase64,
-            style,
-            motion,
-            customPrompt,
-            engine
-          })
-        });
-
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.error || 'Server error');
-
-        let videoUrl = null;
-        if (data.mode === 'veo_cloud' && data.videoUrl) {
-          videoUrl = data.videoUrl;
-        } else {
-          document.getElementById('statusText').innerText = 'Rendering 30fps cartoon clip in browser...';
-          videoUrl = await renderCartoonVideoInBrowser(loadedImageElement, style, motion, data.aiMetadata);
-        }
-
-        consumeOneCredit();
-
-        const videoEl = document.getElementById('outputVideo');
-        videoEl.src = videoUrl;
-        videoEl.classList.remove('hidden');
-        document.getElementById('statusBox').classList.add('hidden');
-
-        if (data.aiMetadata?.caption) {
-          const cap = document.getElementById('aiCaption');
-          cap.innerText = `"${data.aiMetadata.caption}"`;
-          cap.classList.remove('hidden');
-        }
-
-        const dl = document.getElementById('downloadBtn');
-        dl.href = videoUrl;
-        dl.download = data.mode === 'veo_cloud' ? 'toonmotion.mp4' : 'toonmotion.webm';
-        dl.classList.remove('hidden');
-      } catch (err) {
-        alert('Error: ' + err.message);
-        document.getElementById('statusBox').classList.add('hidden');
-      } finally {
-        document.getElementById('generateBtn').disabled = (getTotalAvailable() <= 0);
-      }
-    });
-
-    refreshWalletUI();
-  </script>
-</body>
-</html>
+          // Cartoon Shader Filter on Object
+          if (style === 'pixar') ctx.filter = 'saturate(190%) contrast(125%)';
+          else if (style === 'anime') ctx.filter = 'saturate(220%) contrast(150%)';
+          else if (style === 'comic') ctx.filter = 'contrast(180%) saturate(140%) sepia(25%)';
+          else if (style === 'neon') ctx.filter = `hue-
